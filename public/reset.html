@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Reset Auth - E-Cell Voting</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #1a202c;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #718096;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin-bottom: 25px;
+      border-radius: 4px;
+    }
+    .warning strong {
+      color: #92400e;
+      display: block;
+      margin-bottom: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 12px;
+    }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+    .btn-secondary:hover {
+      background: #cbd5e0;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+    .status-success {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      color: #065f46;
+    }
+    .status-loading {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+    }
+    .step {
+      padding: 12px;
+      background: #f7fafc;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .step.done {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .step.done::before {
+      content: "✓ ";
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔄 Reset Authentication</h1>
+    <p class="subtitle">Clear all auth data and reset rate limits</p>
+    
+    <div class="warning">
+      <strong>⚠️ Rate Limit Detected</strong>
+      Supabase has temporarily blocked login attempts. This tool will clear all authentication data and help reset the limit.
+    </div>
+
+    <button class="btn-primary" onclick="clearEverything()">
+      🧹 Clear All Data & Reset
+    </button>
+    
+    <button class="btn-secondary" onclick="window.location.href='/'">
+      🏠 Back to Home
+    </button>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function clearEverything() {
+      const statusDiv = document.getElementById('status');
+      statusDiv.style.display = 'block';
+      statusDiv.className = 'status-loading';
+      statusDiv.innerHTML = '<strong>⏳ Clearing data...</strong>';
+      
+      const steps = [];
+      
+      try {
+        // Step 1: Clear localStorage
+        const tokensBefore = localStorage.length;
+        localStorage.clear();
+        steps.push(`<div class="step done">Cleared ${tokensBefore} localStorage items</div>`);
+        statusDiv.innerHTML = steps.join('');
+        await sleep(300);
+        
+        // Step 2: Clear sessionStorage
+        const sessionBefore = sessionStorage.length;
+        sessionStorage.clear();
+        steps.push(`<div class="step done">Cleared ${sessionBefore} sessionStorage items</div>`);
+        statusDiv.innerHTML = steps.join('');
+        await sleep(300);
+        
+        // Step 3: Clear all cookies
+        const cookies = document.cookie.split(";");
+        for (let cookie of cookies) {
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+        }
+        steps.push(`<div class="step done">Cleared ${cookies.length} cookies</div>`);
+        statusDiv.innerHTML = steps.join('');
+        await sleep(300);
+        
+        // Step 4: Clear IndexedDB
+        if (window.indexedDB) {
+          try {
+            const databases = await window.indexedDB.databases();
+            for (let db of databases) {
+              window.indexedDB.deleteDatabase(db.name);
+            }
+            steps.push(`<div class="step done">Cleared ${databases.length} IndexedDB databases</div>`);
+          } catch (e) {
+            steps.push(`<div class="step done">Cleared IndexedDB</div>`);
+          }
+          statusDiv.innerHTML = steps.join('');
+          await sleep(300);
+        }
+        
+        // Step 5: Clear Cache Storage
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+          steps.push(`<div class="step done">Cleared ${cacheNames.length} cache storage items</div>`);
+          statusDiv.innerHTML = steps.join('');
+          await sleep(300);
+        }
+        
+        // Success
+        statusDiv.className = 'status-success';
+        statusDiv.innerHTML = steps.join('') + `
+          <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+            <strong style="color: #059669; display: block; margin-bottom: 10px;">✅ All data cleared!</strong>
+            <p style="color: #4b5563; margin-bottom: 15px;">Now follow these steps:</p>
+            <ol style="color: #4b5563; margin-left: 20px; line-height: 1.8;">
+              <li><strong>Close this tab</strong></li>
+              <li><strong>Open an incognito/private window</strong></li>
+              <li><strong>Go to http://localhost:5173</strong></li>
+              <li><strong>Try logging in again</strong></li>
+            </ol>
+            <p style="margin-top: 15px; color: #6b7280; font-size: 14px;">
+              Or wait 5 minutes and try in this browser.
+            </p>
+          </div>
+        `;
+        
+      } catch (error) {
+        statusDiv.className = 'status-loading';
+        statusDiv.innerHTML = `
+          <strong style="color: #dc2626;">❌ Error: ${error.message}</strong>
+          <p style="margin-top: 10px;">Try manually clearing your browser data or use incognito mode.</p>
+        `;
+      }
+    }
+    
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+</body>
+</html>

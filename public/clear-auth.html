@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Clear Auth State</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+      }
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        text-align: center;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 1rem;
+      }
+      p {
+        color: #666;
+        line-height: 1.6;
+      }
+      button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 10px;
+        transition: background 0.3s;
+      }
+      button:hover {
+        background: #5568d3;
+      }
+      .success {
+        color: #10b981;
+        font-weight: bold;
+        margin-top: 1rem;
+      }
+      .info {
+        background: #f3f4f6;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+      }
+      code {
+        background: #e5e7eb;
+        padding: 2px 6px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 Clear Authentication State</h1>
+      <p>
+        Use this tool to clear all authentication data if you're experiencing
+        login issues or rate limiting.
+      </p>
+
+      <div class="info">
+        <strong>This will clear:</strong><br />
+        • LocalStorage (JWT tokens)<br />
+        • SessionStorage<br />
+        • Supabase auth session<br />
+        • All cookies<br />
+        • IndexedDB storage
+      </div>
+
+      <button onclick="clearAll()">Clear All Auth Data</button>
+      <button onclick="window.location.href='/'">Go to Home</button>
+
+      <div id="result"></div>
+
+      <div class="info" style="margin-top: 2rem; font-size: 14px">
+        <strong>If you see "Too many authentication attempts":</strong><br />
+        1. Click "Clear All Auth Data"<br />
+        2. Wait 5 minutes<br />
+        3. Try logging in again<br />
+        <br />
+        <strong>Or use incognito mode</strong> to bypass rate limits.
+      </div>
+    </div>
+
+    <script>
+      async function clearAll() {
+        const result = document.getElementById("result");
+        result.innerHTML = "Clearing...";
+
+        try {
+          // Clear localStorage
+          localStorage.clear();
+          console.log("✅ LocalStorage cleared");
+
+          // Clear sessionStorage
+          sessionStorage.clear();
+          console.log("✅ SessionStorage cleared");
+
+          // Clear cookies
+          document.cookie.split(";").forEach(function (c) {
+            document.cookie = c
+              .replace(/^ +/, "")
+              .replace(
+                /=.*/,
+                "=;expires=" + new Date().toUTCString() + ";path=/"
+              );
+          });
+          console.log("✅ Cookies cleared");
+
+          // Clear IndexedDB
+          if (window.indexedDB) {
+            const dbs = await window.indexedDB.databases();
+            dbs.forEach((db) => {
+              window.indexedDB.deleteDatabase(db.name);
+            });
+            console.log("✅ IndexedDB cleared");
+          }
+
+          // Clear Supabase auth (if available)
+          try {
+            const supabaseKeys = Object.keys(localStorage).filter(
+              (key) => key.startsWith("sb-") || key.includes("supabase")
+            );
+            supabaseKeys.forEach((key) => localStorage.removeItem(key));
+            console.log("✅ Supabase auth cleared");
+          } catch (e) {
+            console.log("Supabase not available");
+          }
+
+          result.innerHTML =
+            '<div class="success">✅ All authentication data cleared!<br><br>You can now close this tab or <a href="/">go home</a></div>';
+
+          // Reload after 2 seconds
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+        } catch (error) {
+          result.innerHTML =
+            '<div style="color: red;">Error: ' + error.message + "</div>";
+          console.error("Error clearing data:", error);
+        }
+      }
+
+      // Log current storage state
+      console.log("Current localStorage:", localStorage);
+      console.log("Current sessionStorage:", sessionStorage);
+    </script>
+  </body>
+</html>
